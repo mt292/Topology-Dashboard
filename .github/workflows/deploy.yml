@@ -12,7 +12,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Setup Node.js 18
+      - name: Set up Node.js 18
         uses: actions/setup-node@v3
         with:
           node-version: '18'
@@ -20,12 +20,12 @@ jobs:
       - name: Install & build backend
         working-directory: backend
         run: |
-          npm install
+          npm ci
 
       - name: Install & build frontend
         working-directory: frontend
         run: |
-          npm ci
+          npm install --legacy-peer-deps
           npm run build
 
       - name: Deploy to server
