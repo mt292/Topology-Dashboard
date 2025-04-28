@@ -1,195 +1,141 @@
-import React, {
-  useState,
-  useEffect,
-  useCallback,
-} from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import ReactFlow, {
   Background,
-  Controls,
   MiniMap,
-  addEdge,
-  useNodesState,
-  useEdgesState,
+  Controls,
+  useReactFlow,
 } from 'react-flow-renderer';
 import './App.css';
 
-// (1) simple icon imports – replace with your own SVGs or PNGs
+// import your icons (or point these at /device.svg etc)
 import deviceIcon from './icons/device.svg';
 import switchIcon from './icons/switch.svg';
-import starIcon from './icons/star.svg';
+import starIcon   from './icons/star.svg';
 
-// (2) custom node components
-function DeviceNode({ data }) {
-  return (
-    <div className="custom-node">
-      <img src={deviceIcon} alt="" />
-      <div className="label">{data.label}</div>
-    </div>
-  );
-}
-
-function SwitchNode({ data }) {
-  return (
-    <div className="custom-node">
-      <img src={switchIcon} alt="" />
-      <div className="label">{data.label}</div>
-    </div>
-  );
-}
-
-function IconNode({ data }) {
-  return (
-    <div className="custom-node">
-      <img src={starIcon} alt="" />
-      <div className="label">{data.label}</div>
-    </div>
-  );
-}
-
-const nodeTypes = {
-  device: DeviceNode,
-  switch: SwitchNode,
-  icon: IconNode,
-};
-
-// (3) ID generator for new nodes
 let id = 3;
-const getId = () => `node_${id++}`;
+const getId = () => `${id++}`;
 
 function App() {
-  // core react-flow state hooks
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
-
-  // which tool is active (null | 'device' | 'switch' | 'icon')
-  const [toolMode, setToolMode] = useState(null);
-  // show/hide the mini FAB menu
+  const [elements, setElements] = useState([]);
   const [menuOpen, setMenuOpen] = useState(false);
+  const { project, getViewport } = useReactFlow();
 
-  // preview position while in add mode
-  const [previewPos, setPreviewPos] = useState(null);
-
-  // fetch initial topology once
+  // load initial topology
   useEffect(() => {
     fetch('/api/topology')
       .then((r) => r.json())
-      .then(({ nodes: n, edges: e }) => {
-        setNodes(n);
-        setEdges(e);
+      .then(({ nodes, edges }) => {
+        setElements([...nodes, ...edges]);
       })
-      .catch((err) => console.error('load topology failed', err));
-  }, [setNodes, setEdges]);
+      .catch((err) => console.error(err));
+  }, []);
 
-  // track mouse moves on the pane
-  const onPaneMove = useCallback(
-    (event) => {
-      if (!toolMode) return;
-      const bounds = event.target.getBoundingClientRect();
-      setPreviewPos({
-        x: event.clientX - bounds.left,
-        y: event.clientY - bounds.top,
+  // click-to-add helper: center of viewport
+  const addNodeAtCenter = (type) => {
+    const vp = getViewport();
+    const centerX = vp.x + vp.width  / 2;
+    const centerY = vp.y + vp.height / 2;
+    const newNode = {
+      id: getId(),
+      type: 'default',
+      position: { x: centerX - 75, y: centerY - 25 },
+      data: { label: type.charAt(0).toUpperCase() + type.slice(1) },
+      style: { width: 150 },
+    };
+    setElements((els) => els.concat(newNode));
+    setMenuOpen(false);
+  };
+
+  // drag-and-drop handlers
+  const onDragOver = useCallback((evt) => {
+    evt.preventDefault();
+    evt.dataTransfer.dropEffect = 'move';
+  }, []);
+
+  const onDrop = useCallback(
+    (evt) => {
+      evt.preventDefault();
+      const type = evt.dataTransfer.getData('application/reactflow');
+      const { top, left } = document
+        .querySelector('.react-flow')
+        .getBoundingClientRect();
+      const position = project({
+        x: evt.clientX - left,
+        y: evt.clientY - top,
       });
-    },
-    [toolMode]
-  );
-
-  // place a new node on click
-  const onPaneClick = useCallback(
-    (event) => {
-      if (!toolMode || !previewPos) return;
-      const label =
-        toolMode === 'device'
-          ? 'Device'
-          : toolMode === 'switch'
-          ? 'Switch'
-          : 'Icon';
       const newNode = {
         id: getId(),
-        type: toolMode,
-        position: previewPos,
-        data: { label },
+        type: 'default',
+        position,
+        data: { label: type.charAt(0).toUpperCase() + type.slice(1) },
+        style: { width: 150 },
       };
-      setNodes((nds) => nds.concat(newNode));
-      setToolMode(null);
+      setElements((els) => els.concat(newNode));
       setMenuOpen(false);
-      setPreviewPos(null);
     },
-    [toolMode, previewPos, setNodes]
+    [project]
   );
-
-  // build ghost‐node array
-  const ghostNode =
-    toolMode && previewPos
-      ? [
-          {
-            id: '__preview__',
-            type: toolMode,
-            position: previewPos,
-            data: {
-              label:
-                toolMode === 'device'
-                  ? 'Device'
-                  : toolMode === 'switch'
-                  ? 'Switch'
-                  : 'Icon',
-            },
-            style: { opacity: 0.4, pointerEvents: 'none' },
-          },
-        ]
-      : [];
 
   return (
     <div className="app">
-      {/* FAB + menu */}
-      <div className="fab-container">
-        <button
-          className="fab"
-          onClick={() => setMenuOpen((o) => !o)}
-        >
-          ＋
-        </button>
-        {menuOpen && (
-          <div className="fab-menu">
-            <button
-              className={toolMode === 'device' ? 'active' : ''}
-              onClick={() => setToolMode('device')}
-            >
-              🖥 Device
-            </button>
-            <button
-              className={toolMode === 'switch' ? 'active' : ''}
-              onClick={() => setToolMode('switch')}
-            >
-              🔀 Switch
-            </button>
-            <button
-              className={toolMode === 'icon' ? 'active' : ''}
-              onClick={() => setToolMode('icon')}
-            >
-              ✨ Icon
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* the flow canvas */}
+      {/* React Flow canvas */}
       <ReactFlow
-        nodes={[...nodes, ...ghostNode]}
-        edges={edges}
-        nodeTypes={nodeTypes}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onConnect={(params) =>
-          setEdges((eds) => addEdge(params, eds))
-        }
-        onPaneClick={onPaneClick}
-        onPaneMouseMove={onPaneMove}
+        elements={elements}
+        onDragOver={onDragOver}
+        onDrop={onDrop}
         fitView
       >
         <Background gap={16} />
         <MiniMap />
         <Controls />
       </ReactFlow>
+
+      {/* Floating + button */}
+      <button
+        className={`fab ${menuOpen ? 'open' : ''}`}
+        onClick={() => setMenuOpen((o) => !o)}
+      >
+        +
+      </button>
+
+      {/* Pop-out toolbar */}
+      {menuOpen && (
+        <div className="toolbar">
+          <div
+            className="tool"
+            draggable
+            onDragStart={(e) =>
+              e.dataTransfer.setData('application/reactflow', 'device')
+            }
+            onClick={() => addNodeAtCenter('device')}
+          >
+            <img src={deviceIcon} alt="Device" />
+            <span>Device</span>
+          </div>
+          <div
+            className="tool"
+            draggable
+            onDragStart={(e) =>
+              e.dataTransfer.setData('application/reactflow', 'switch')
+            }
+            onClick={() => addNodeAtCenter('switch')}
+          >
+            <img src={switchIcon} alt="Switch" />
+            <span>Switch</span>
+          </div>
+          <div
+            className="tool"
+            draggable
+            onDragStart={(e) =>
+              e.dataTransfer.setData('application/reactflow', 'icon')
+            }
+            onClick={() => addNodeAtCenter('icon')}
+          >
+            <img src={starIcon} alt="Icon" />
+            <span>Icon</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
