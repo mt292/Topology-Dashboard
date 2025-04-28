@@ -1,11 +1,8 @@
 // v10 style
-import React, { useEffect, useState, useCallback } from 'react';
-import ReactFlow, {
-  Controls,
-  MiniMap,
-} from 'reactflow';
-import ReactFlow, { Background } from 'react-flow-renderer';
+import React, { useState, useCallback } from 'react';
+import ReactFlow, { MiniMap, Background } from 'react-flow-renderer';
 import 'react-flow-renderer/dist/style.css';
+import 'react-flow-renderer/dist/theme-default.css';
 
 function App() {
   const [elements, setElements] = useState([]);
