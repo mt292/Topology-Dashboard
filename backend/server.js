@@ -2,6 +2,8 @@
 const path = require('path');
 const express = require('express');
 const app = express();
+const fs = require('fs');
+const https = require('https');
 
 // 1) Stub out your topology API
 app.get('/api/topology', (req, res) => {
@@ -31,11 +33,12 @@ app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 const https = require('https');
 const fs = require('fs');
 
-// point these at your cert + key files
 const options = {
-  key:  fs.readFileSync('/etc/ssl/private/topo.key'),
-  cert: fs.readFileSync('/etc/ssl/certs/topo.crt'),
+  key:  fs.readFileSync(__dirname + '/certs/server-key.pem'),
+  cert: fs.readFileSync(__dirname + '/certs/server-cert.pem'),
 };
 
-https.createServer(options, app)
-     .listen(443, () => console.log('🚀 HTTPS on 443'))
+const PORT = process.env.PORT || 443;
+https
+  .createServer(options, app)
+  .listen(PORT, () => console.log(`🔒 HTTPS server listening on port ${PORT}`));
