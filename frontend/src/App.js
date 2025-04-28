@@ -1,6 +1,10 @@
 // v10 style
-import React, { useState, useCallback } from 'react';
-import ReactFlow, { MiniMap, Background } from 'react-flow-renderer';
+import React, { useState, useEffect, useCallback } from 'react';
+import ReactFlow, {
+  MiniMap,
+  Controls,
+  Background
+} from 'react-flow-renderer';
 import 'react-flow-renderer/dist/style.css';
 import 'react-flow-renderer/dist/theme-default.css';
 
