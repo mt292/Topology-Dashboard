@@ -28,7 +28,14 @@ app.get('*', (req, res) => {
 // 4) (Optional) Your existing healthcheck:
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 
-const port = process.env.PORT || 443;
-app.listen(port, () => {
-  console.log(`🚀 HTTPS server up on port ${port}`);
-});
+const https = require('https');
+const fs = require('fs');
+
+// point these at your cert + key files
+const options = {
+  key:  fs.readFileSync('/etc/ssl/private/topo.key'),
+  cert: fs.readFileSync('/etc/ssl/certs/topo.crt'),
+};
+
+https.createServer(options, app)
+     .listen(443, () => console.log('🚀 HTTPS on 443'))
