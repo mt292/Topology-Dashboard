@@ -1,46 +1,32 @@
 import React, { useState, useEffect } from 'react';
-import ReactFlow, {
-  Background,
-  Controls,
-  MiniMap,
-  applyEdgeChanges,
-  applyNodeChanges
-} from 'react-flow-renderer';
-import 'react-flow-renderer/dist/style.css';
+import ReactFlow, { Controls, MiniMap, Background } from 'react-flow-renderer';
+import './App.css';
 
 function App() {
-  const [nodes, setNodes] = useState([]);
-  const [edges, setEdges] = useState([]);
+  const [elements, setElements] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // on mount: fetch topology
   useEffect(() => {
     fetch('/api/topology')
-      .then((r) => r.json())
+      .then((res) => res.json())
       .then(({ nodes, edges }) => {
-        setNodes(nodes);
-        setEdges(edges);
+        // React Flow expects a single array of node and edge objects:
+        setElements([...nodes, ...edges]);
       })
-      .catch((err) => console.error('failed to load topology', err));
+      .catch((err) => {
+        console.error('failed to load topology', err);
+      })
+      .finally(() => setLoading(false));
   }, []);
 
-  // handlers if you want to allow drag/drop etc.
-  const onNodesChange = (changes) =>
-    setNodes((nds) => applyNodeChanges(changes, nds));
-  const onEdgesChange = (changes) =>
-    setEdges((eds) => applyEdgeChanges(changes, eds));
+  if (loading) return <div className="loading">Loading topology…</div>;
 
   return (
     <div style={{ width: '100vw', height: '100vh' }}>
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        fitView
-      >
-        <Background />
+      <ReactFlow elements={elements}>
         <MiniMap />
         <Controls />
+        <Background gap={16} />
       </ReactFlow>
     </div>
   );
