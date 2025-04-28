@@ -1,29 +1,49 @@
-import React, { useEffect, useState } from 'react';
-import ReactFlow, { Background, Controls } from 'react-flow-renderer';
+// src/App.js
+import React, { useState, useEffect, useCallback } from 'react';
+import ReactFlow, {
+  Background,
+  Controls,
+  MiniMap,
+  useEdgesState,
+  useNodesState,
+} from 'reactflow';
+import 'reactflow/dist/style.css';
 
 function App() {
-  const [nodes, setNodes] = useState([]);
-  const [edges, setEdges] = useState([]);
+  // state for our nodes & edges
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
+  // fetch once on mount
   useEffect(() => {
-    // hit your backend’s topology endpoint
-    fetch('/api/topology')
-      .then(res => res.json())
-      .then(data => {
-        // expect { nodes: [...], edges: [...] }
-        setNodes(data.nodes);
-        setEdges(data.edges);
+    fetch('/api/topology', { method: 'GET' })
+      .then((r) => r.json())
+      .then(({ nodes, edges }) => {
+        setNodes(nodes);
+        setEdges(edges);
       })
-      .catch(err => {
-        console.error('Failed to load topology:', err);
+      .catch((err) => {
+        console.error('could not load topology', err);
       });
-  }, []);
+  }, [setNodes, setEdges]);
+
+  const onConnect = useCallback(
+    (connection) => setEdges((eds) => [...eds, connection]),
+    [setEdges]
+  );
 
   return (
-    <div style={{ height: '100vh', width: '100%' }}>
-      <ReactFlow nodes={nodes} edges={edges} fitView>
-        {/* dotted grid background */}
-        <Background variant="dots" gap={12} size={1} color="#aaa" />
+    <div style={{ width: '100vw', height: '100vh' }}>
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onConnect={onConnect}
+        fitView
+      >
+        <Background />
+        <MiniMap />
         <Controls />
       </ReactFlow>
     </div>
