@@ -30,9 +30,6 @@ app.get('*', (req, res) => {
 // 4) (Optional) Your existing healthcheck:
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 
-const https = require('https');
-const fs = require('fs');
-
 const options = {
   key:  fs.readFileSync(__dirname + '/certs/server-key.pem'),
   cert: fs.readFileSync(__dirname + '/certs/server-cert.pem'),
