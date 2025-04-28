@@ -1,68 +1,55 @@
-/* full‐screen ReactFlow container */
+/* fill the whole screen */
 .app {
   width: 100vw;
   height: 100vh;
   position: relative;
 }
 
-/* FAB base */
-.fab-container {
+/* floating action button */
+.fab {
   position: absolute;
   top: 16px;
   right: 16px;
-  z-index: 10;
-}
-
-.fab {
-  width: 48px;
-  height: 48px;
-  border: none;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
+  font-size: 32px;
+  line-height: 56px;
+  text-align: center;
   background: #1976d2;
   color: white;
-  font-size: 24px;
+  border: none;
   cursor: pointer;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  transition: transform 0.2s ease;
+}
+.fab.open {
+  transform: rotate(45deg);
 }
 
-/* FAB menu */
-.fab-menu {
+/* toolbar pop-out */
+.toolbar {
+  position: absolute;
+  top: 16px;
+  right: 88px; /* just to the left of FAB */
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
   display: flex;
   flex-direction: column;
-  margin-top: 8px;
-  background: white;
-  border-radius: 4px;
-  overflow: hidden;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
 }
-
-.fab-menu button {
-  padding: 8px 12px;
-  background: white;
-  border: none;
-  text-align: left;
-  cursor: pointer;
-  font-size: 14px;
-}
-
-.fab-menu button:hover,
-.fab-menu button.active {
-  background: #e3f2fd;
-}
-
-/* custom node styling */
-.custom-node {
+.tool {
   display: flex;
   align-items: center;
-  padding: 6px 12px;
-  border: 1px solid #222;
-  border-radius: 4px;
-  background: white;
-  font-size: 14px;
+  padding: 8px 12px;
+  cursor: pointer;
+  user-select: none;
 }
-
-.custom-node img {
-  width: 20px;
-  height: 20px;
+.tool:hover {
+  background: #f5f5f5;
+}
+.tool img {
+  width: 24px;
+  height: 24px;
   margin-right: 8px;
 }
