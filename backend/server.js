@@ -1,37 +1,9 @@
-// backend/server.js
-const fs      = require('fs');
-const path    = require('path');
-const https   = require('https');
-const express = require('express');
+#!/usr/bin/env node
 const path = require('path');
+const express = require('express');
 const app = express();
 
-// stub API
-app.get('/api/topology', (req, res) => {
-  res.json({
-    nodes: [
-      { id: '1', data: { label: 'Router' }, position: { x: 100, y: 100 } },
-      { id: '2', data: { label: 'Switch' }, position: { x: 400, y: 100 } },
-    ],
-    edges: [{ id: 'e1-2', source: '1', target: '2', type: 'smoothstep' }],
-  });
-});
-
-// serve React build
-app.use(express.static(path.join(__dirname, '../frontend/build')));
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../frontend/build/index.html'));
-});
-
-const port = process.env.PORT || 443;
-app.listen(port, () => console.log(`🚀 HTTPS server up on port ${port}`));
-
-// 1) Health check (you already have this)
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok' });
-});
-
-// 2) Stub out the topology endpoint
+// 1) Stub out your topology API
 app.get('/api/topology', (req, res) => {
   res.json({
     nodes: [
@@ -44,17 +16,19 @@ app.get('/api/topology', (req, res) => {
   });
 });
 
-// 3) Serve React’s static build
-app.use(express.static(path.join(__dirname, '../frontend/build')));
+// 2) Serve the React build
+const buildDir = path.join(__dirname, '../frontend/build');
+app.use(express.static(buildDir));
+
+// 3) For any other route, send back React’s index.html
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../frontend/build', 'index.html'));
+  res.sendFile(path.join(buildDir, 'index.html'));
 });
 
-// 4) HTTPS setup & listen
-const options = {
-  key:  fs.readFileSync(path.join(__dirname, '../certs/topo.key')),
-  cert: fs.readFileSync(path.join(__dirname, '../certs/topo.crt')),
-};
-https.createServer(options, app).listen(443, () => {
-  console.log('🚀 HTTPS server up on port 443');
+// 4) (Optional) Your existing healthcheck:
+app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
+
+const port = process.env.PORT || 443;
+app.listen(port, () => {
+  console.log(`🚀 HTTPS server up on port ${port}`);
 });
