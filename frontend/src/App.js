@@ -1,56 +1,44 @@
-// v10 style
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import ReactFlow, {
-  MiniMap,
+  Background,
   Controls,
-  Background
+  MiniMap,
+  applyEdgeChanges,
+  applyNodeChanges
 } from 'react-flow-renderer';
 import 'react-flow-renderer/dist/style.css';
-import 'react-flow-renderer/dist/theme-default.css';
 
 function App() {
-  const [elements, setElements] = useState([]);
+  const [nodes, setNodes] = useState([]);
+  const [edges, setEdges] = useState([]);
 
-  // load topology from the backend
+  // on mount: fetch topology
   useEffect(() => {
     fetch('/api/topology')
-      .then((res) => {
-        if (!res.ok) throw new Error(res.statusText);
-        return res.json();
-      })
+      .then((r) => r.json())
       .then(({ nodes, edges }) => {
-        // React Flow wants a single array of node+edge elements
-        setElements([...nodes, ...edges]);
+        setNodes(nodes);
+        setEdges(edges);
       })
-      .catch((err) => {
-        console.error('failed to load topology', err);
-      });
+      .catch((err) => console.error('failed to load topology', err));
   }, []);
 
-  const onElementsRemove = useCallback(
-    (elementsToRemove) =>
-      setElements((els) =>
-        els.filter((e) => !elementsToRemove.includes(e))
-      ),
-    []
-  );
-
-  const onConnect = useCallback(
-    (connection) =>
-      setElements((els) => [...els, connection]),
-    []
-  );
+  // handlers if you want to allow drag/drop etc.
+  const onNodesChange = (changes) =>
+    setNodes((nds) => applyNodeChanges(changes, nds));
+  const onEdgesChange = (changes) =>
+    setEdges((eds) => applyEdgeChanges(changes, eds));
 
   return (
-    <div style={{ height: '100vh', width: '100%' }}>
+    <div style={{ width: '100vw', height: '100vh' }}>
       <ReactFlow
-        elements={elements}
-        onElementsRemove={onElementsRemove}
-        onConnect={onConnect}
-        deleteKeyCode={46} /* 'delete'-key */
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
         fitView
       >
-        <Background gap={16} size={1} color="#aaa" />
+        <Background />
         <MiniMap />
         <Controls />
       </ReactFlow>
