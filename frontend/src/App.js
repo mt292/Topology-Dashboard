@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ReactFlow, {
   ReactFlowProvider,
   Background,
@@ -17,53 +17,52 @@ const getId = () => `${id++}`;
 
 function FlowCanvas({ elements, setElements }) {
   const { project, getViewport } = useReactFlow();
-  const rfWrapper = useRef(null);
+  const wrapper = useRef(null);
 
-  // fetch initial topology
+  // 1) Fetch topology once
   useEffect(() => {
     fetch('/api/topology')
-      .then((r) => r.json())
+      .then(res => res.json())
       .then(({ nodes, edges }) => {
         console.log('Topology payload:', { nodes, edges });
         setElements([...nodes, ...edges]);
       })
-      .catch(console.error);
+      .catch(err => console.error('Failed to load topology', err));
   }, [setElements]);
 
-  // helper to add at center of viewport
+  // 2) Add-at-center helper
   const addAtCenter = useCallback((type) => {
     const vp = getViewport();
-    const pos = {
-      x: vp.x + vp.width  / 2 - 75,
-      y: vp.y + vp.height / 2 - 25
-    };
-    const node = {
+    const newNode = {
       id: getId(),
       type: 'default',
-      position: pos,
+      position: {
+        x: vp.x + vp.width  / 2 - 75,
+        y: vp.y + vp.height / 2 - 25
+      },
       data: { label: type.charAt(0).toUpperCase() + type.slice(1) },
       style: { width: 150 }
     };
-    setElements((els) => [...els, node]);
+    setElements(es => [...es, newNode]);
   }, [getViewport, setElements]);
 
-  // listen for our click-add events
+  // 3) Listen for global "addNodeAtCenter"
   useEffect(() => {
-    const handler = (e) => addAtCenter(e.detail);
-    window.addEventListener('addNodeAtCenter', handler);
-    return () => window.removeEventListener('addNodeAtCenter', handler);
+    const h = e => addAtCenter(e.detail);
+    window.addEventListener('addNodeAtCenter', h);
+    return () => window.removeEventListener('addNodeAtCenter', h);
   }, [addAtCenter]);
 
-  // drag-and-drop from toolbar
-  const onDragOver = useCallback((evt) => {
+  // 4) Drag-over / drop handlers
+  const onDragOver = useCallback(evt => {
     evt.preventDefault();
     evt.dataTransfer.dropEffect = 'move';
   }, []);
 
-  const onDrop = useCallback((evt) => {
+  const onDrop = useCallback(evt => {
     evt.preventDefault();
     const type = evt.dataTransfer.getData('application/reactflow');
-    const bounds = rfWrapper.current.getBoundingClientRect();
+    const bounds = wrapper.current.getBoundingClientRect();
     const coords = project({
       x: evt.clientX - bounds.left,
       y: evt.clientY - bounds.top
@@ -75,11 +74,11 @@ function FlowCanvas({ elements, setElements }) {
       data: { label: type.charAt(0).toUpperCase() + type.slice(1) },
       style: { width: 150 }
     };
-    setElements((els) => [...els, node]);
+    setElements(es => [...es, node]);
   }, [project, setElements]);
 
   return (
-    <div ref={rfWrapper} className="react-flow">
+    <div ref={wrapper} className="react-flow-wrapper">
       <ReactFlow
         elements={elements}
         onDragOver={onDragOver}
@@ -98,8 +97,8 @@ function App() {
   const [elements, setElements] = useState([]);
   const [menuOpen, setMenuOpen] = useState(false);
 
+  // dispatch center-add
   const addNode = (type) => {
-    // dispatch the center-add event
     window.dispatchEvent(new CustomEvent('addNodeAtCenter', { detail: type }));
     setMenuOpen(false);
   };
@@ -110,31 +109,33 @@ function App() {
         <FlowCanvas elements={elements} setElements={setElements} />
       </ReactFlowProvider>
 
+      {/* Floating "+" button */}
       <button
         className={`fab ${menuOpen ? 'open' : ''}`}
-        onClick={() => setMenuOpen(o => !o)}
+        onClick={() => setMenuOpen(m => !m)}
       >
         +
       </button>
 
+      {/* Hidden toolbar */}
       {menuOpen && (
         <div className="toolbar">
           {[
             { type: 'device', icon: deviceIcon, label: 'Device' },
             { type: 'switch', icon: switchIcon, label: 'Switch' },
             { type: 'icon'  , icon: starIcon  , label: 'Icon'   },
-          ].map(({ type, icon, label }) => (
+          ].map(item => (
             <div
-              key={type}
+              key={item.type}
               className="tool"
               draggable
               onDragStart={e =>
-                e.dataTransfer.setData('application/reactflow', type)
+                e.dataTransfer.setData('application/reactflow', item.type)
               }
-              onClick={() => addNode(type)}
+              onClick={() => addNode(item.type)}
             >
-              <img src={icon} alt={label} />
-              <span>{label}</span>
+              <img src={item.icon} alt={item.label} />
+              <span>{item.label}</span>
             </div>
           ))}
         </div>
