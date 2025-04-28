@@ -1,48 +1,55 @@
 // src/App.js
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import ReactFlow, {
   Background,
   Controls,
   MiniMap,
-  useEdgesState,
-  useNodesState,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 
 function App() {
-  // state for our nodes & edges
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [elements, setElements] = useState([]);
 
-  // fetch once on mount
+  // load topology from the backend
   useEffect(() => {
-    fetch('/api/topology', { method: 'GET' })
-      .then((r) => r.json())
+    fetch('/api/topology')
+      .then((res) => {
+        if (!res.ok) throw new Error(res.statusText);
+        return res.json();
+      })
       .then(({ nodes, edges }) => {
-        setNodes(nodes);
-        setEdges(edges);
+        // React Flow wants a single array of node+edge elements
+        setElements([...nodes, ...edges]);
       })
       .catch((err) => {
-        console.error('could not load topology', err);
+        console.error('failed to load topology', err);
       });
-  }, [setNodes, setEdges]);
+  }, []);
+
+  const onElementsRemove = useCallback(
+    (elementsToRemove) =>
+      setElements((els) =>
+        els.filter((e) => !elementsToRemove.includes(e))
+      ),
+    []
+  );
 
   const onConnect = useCallback(
-    (connection) => setEdges((eds) => [...eds, connection]),
-    [setEdges]
+    (connection) =>
+      setElements((els) => [...els, connection]),
+    []
   );
 
   return (
-    <div style={{ width: '100vw', height: '100vh' }}>
+    <div style={{ height: '100vh', width: '100%' }}>
       <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
+        elements={elements}
+        onElementsRemove={onElementsRemove}
         onConnect={onConnect}
+        deleteKeyCode={46} /* 'delete'-key */
         fitView
       >
-        <Background />
+        <Background gap={16} size={1} color="#aaa" />
         <MiniMap />
         <Controls />
       </ReactFlow>
