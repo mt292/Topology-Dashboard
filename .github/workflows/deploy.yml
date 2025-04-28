@@ -8,37 +8,29 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ${{ github.workspace }}
 
     steps:
-      # 1. Check out your repo
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2. Set up Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '18'
 
-      # 3. Build backend
       - name: Build backend
         working-directory: backend
         run: |
           npm ci
-          # if you have tests: npm test
-        # you can add cache: node_modules caching here if you like
+          # npm test   # <-- uncomment if you have tests
 
-      # 4. Build frontend
       - name: Build frontend
         working-directory: frontend
         run: |
-          npm ci
+          # use legacy-peer-deps to bypass react-flow-renderer<>react mismatch
+          npm install --legacy-peer-deps
           npm run build
 
-      # 5. Deploy to your server over SSH
       - name: Deploy to server
         uses: appleboy/ssh-action@v0.1.7
         with:
@@ -50,7 +42,6 @@ jobs:
             set -e
             cd /opt/topology-dashboard
             git pull origin main
-            # re-install & rebuild on the server just to be safe
             npm ci
             npm run build --prefix frontend
             systemctl restart topology-dashboard
