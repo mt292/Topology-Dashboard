@@ -1,25 +1,27 @@
+// frontend/src/App.js
 import React, { useState, useEffect } from 'react';
-import ReactFlow, { Controls, MiniMap, Background } from 'react-flow-renderer';
+import ReactFlow, {
+  MiniMap,
+  Controls,
+  Background
+} from 'react-flow-renderer';
 import './App.css';
+import 'react-flow-renderer/dist/style.css';
 
 function App() {
   const [elements, setElements] = useState([]);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetch('/api/topology')
       .then((res) => res.json())
       .then(({ nodes, edges }) => {
-        // React Flow expects a single array of node and edge objects:
+        // react-flow wants a flat array of nodes+edges
         setElements([...nodes, ...edges]);
       })
       .catch((err) => {
         console.error('failed to load topology', err);
-      })
-      .finally(() => setLoading(false));
+      });
   }, []);
-
-  if (loading) return <div className="loading">Loading topology…</div>;
 
   return (
     <div style={{ width: '100vw', height: '100vh' }}>
