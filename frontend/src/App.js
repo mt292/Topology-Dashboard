@@ -10,82 +10,94 @@ import ReactFlow, {
 } from 'react-flow-renderer';
 import 'react-flow-renderer/dist/style.css';
 import 'react-flow-renderer/dist/theme-default.css';
-
-import './App.css'; // see CSS below
+import './App.css';
 
 let id = 3;
-const getId = () => `${id++}`;
+const getId = () => `node_${id++}`;
 
 function App() {
-  const [nodes, setNodes, onNodesChange] = useNodesState([
-    // initial stubbed nodes come from fetch
-  ]);
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [toolMode, setToolMode] = useState(null);       // 'device' | 'switch' | 'icon'
+  const [menuOpen, setMenuOpen] = useState(false);
 
-  const [toolMode, setToolMode] = useState(null);
-  // toolMode: null | 'device' | 'switch' | 'icon'
-
-  // load initial topology
+  // Fetch the initial topology stub
   useEffect(() => {
     fetch('/api/topology')
-      .then((res) => res.json())
+      .then((r) => r.json())
       .then(({ nodes: n, edges: e }) => {
-        // ensure unique ids
         setNodes(n.map((nd) => ({ ...nd, id: nd.id })));
         setEdges(e);
       })
-      .catch((err) => console.error(err));
+      .catch(console.error);
   }, [setNodes, setEdges]);
 
-  // handle clicks on blank canvas
+  // When you click on the blank pane and a tool is selected, drop a node
   const onPaneClick = useCallback(
     (event) => {
       if (!toolMode) return;
-
       const bounds = event.target.getBoundingClientRect();
       const position = {
         x: event.clientX - bounds.left,
         y: event.clientY - bounds.top,
       };
 
+      const label =
+        toolMode === 'device'
+          ? 'New Device'
+          : toolMode === 'switch'
+          ? 'New Switch'
+          : 'New Icon';
+
       const newNode = {
         id: getId(),
-        data: { label: toolMode === 'device' ? 'New Device' : toolMode === 'switch' ? 'New Switch' : 'Icon' },
+        data: { label },
         position,
-        // you could swap out style or even use custom nodeTypes here
       };
 
       setNodes((nds) => nds.concat(newNode));
       setToolMode(null);
+      setMenuOpen(false);
     },
     [toolMode, setNodes]
   );
 
   return (
     <div className="app">
-      {/* Toolbar */}
-      <div className="toolbar">
+      {/* Floating “＋” button */}
+      <div className="fab-container">
         <button
-          className={toolMode === 'device' ? 'active' : ''}
-          onClick={() => setToolMode((m) => (m === 'device' ? null : 'device'))}
+          className="fab"
+          onClick={() => setMenuOpen((open) => !open)}
+          title="Add node"
         >
-          🖥 Device
+          ＋
         </button>
-        <button
-          className={toolMode === 'switch' ? 'active' : ''}
-          onClick={() => setToolMode((m) => (m === 'switch' ? null : 'switch'))}
-        >
-          🔀 Switch
-        </button>
-        <button
-          className={toolMode === 'icon' ? 'active' : ''}
-          onClick={() => setToolMode((m) => (m === 'icon' ? null : 'icon'))}
-        >
-          ✨ Icon
-        </button>
+
+        {menuOpen && (
+          <div className="fab-menu">
+            <button
+              className={toolMode === 'device' ? 'active' : ''}
+              onClick={() => setToolMode('device')}
+            >
+              🖥︎ Device
+            </button>
+            <button
+              className={toolMode === 'switch' ? 'active' : ''}
+              onClick={() => setToolMode('switch')}
+            >
+              🔀 Switch
+            </button>
+            <button
+              className={toolMode === 'icon' ? 'active' : ''}
+              onClick={() => setToolMode('icon')}
+            >
+              ✨ Icon
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* React Flow */}
       <ReactFlow
         nodes={nodes}
         edges={edges}
