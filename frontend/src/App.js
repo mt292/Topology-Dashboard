@@ -13,6 +13,14 @@ function App() {
         setElements([...nodes, ...edges]);
       })
       .catch((err) => console.error('failed to load topology', err));
+
+  fetch('/api/topology')
+    .then(res => res.json())
+    .then(({ nodes, edges }) => {
+      console.log('🏗 topology payload:', { nodes, edges });
+      setElements([...nodes, ...edges]);
+    })
+    .catch(err => console.error('failed to load topology', err));
   }, []);
 
   return (
