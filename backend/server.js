@@ -1,10 +1,12 @@
+// backend/server.js
+
 const express = require('express');
 const path = require('path');
 
 const app = express();
-const port = process.env.PORT || 80;
+const PORT = process.env.PORT || 80;
 
-// Stub out /api/topology
+// 1️⃣ Stub out /api/topology
 app.get('/api/topology', (req, res) => {
   res.json({
     nodes: [
@@ -17,15 +19,16 @@ app.get('/api/topology', (req, res) => {
   });
 });
 
-// Serve React static files
+// 2️⃣ Serve React’s static build output
 const buildDir = path.join(__dirname, '../frontend/build');
 app.use(express.static(buildDir));
 
-// All other requests go to React app
+// 3️⃣ All other GETs return React’s index.html
 app.get('/*', (req, res) => {
   res.sendFile(path.join(buildDir, 'index.html'));
 });
 
-app.listen(port, () => {
-  console.log(`🚀 HTTP server up on port ${port}`);
+// 4️⃣ Start HTTP server
+app.listen(PORT, () => {
+  console.log(`🚀 HTTP server up on port ${PORT}`);
 });
