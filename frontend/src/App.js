@@ -1,10 +1,10 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import ReactFlow, {
   ReactFlowProvider,
   Background,
   MiniMap,
   Controls,
-  useReactFlow,
+  useReactFlow
 } from 'react-flow-renderer';
 import './App.css';
 
@@ -17,63 +17,80 @@ const getId = () => `${id++}`;
 
 function FlowCanvas({ elements, setElements }) {
   const { project, getViewport } = useReactFlow();
+  const rfWrapper = useRef(null);
 
-  // helper to add at center
-  const addAtCenter = (type) => {
+  // fetch initial topology
+  useEffect(() => {
+    fetch('/api/topology')
+      .then((r) => r.json())
+      .then(({ nodes, edges }) => {
+        console.log('Topology payload:', { nodes, edges });
+        setElements([...nodes, ...edges]);
+      })
+      .catch(console.error);
+  }, [setElements]);
+
+  // helper to add at center of viewport
+  const addAtCenter = useCallback((type) => {
     const vp = getViewport();
     const pos = {
       x: vp.x + vp.width  / 2 - 75,
-      y: vp.y + vp.height / 2 - 25,
+      y: vp.y + vp.height / 2 - 25
     };
     const node = {
       id: getId(),
       type: 'default',
       position: pos,
       data: { label: type.charAt(0).toUpperCase() + type.slice(1) },
-      style: { width: 150 },
+      style: { width: 150 }
     };
     setElements((els) => [...els, node]);
-  };
+  }, [getViewport, setElements]);
 
+  // listen for our click-add events
+  useEffect(() => {
+    const handler = (e) => addAtCenter(e.detail);
+    window.addEventListener('addNodeAtCenter', handler);
+    return () => window.removeEventListener('addNodeAtCenter', handler);
+  }, [addAtCenter]);
+
+  // drag-and-drop from toolbar
   const onDragOver = useCallback((evt) => {
     evt.preventDefault();
     evt.dataTransfer.dropEffect = 'move';
   }, []);
 
-  const onDrop = useCallback(
-    (evt) => {
-      evt.preventDefault();
-      const type = evt.dataTransfer.getData('application/reactflow');
-      const bounds = document
-        .querySelector('.react-flow')
-        .getBoundingClientRect();
-      const coords = project({
-        x: evt.clientX - bounds.left,
-        y: evt.clientY - bounds.top,
-      });
-      const node = {
-        id: getId(),
-        type: 'default',
-        position: coords,
-        data: { label: type.charAt(0).toUpperCase() + type.slice(1) },
-        style: { width: 150 },
-      };
-      setElements((els) => [...els, node]);
-    },
-    [project, setElements]
-  );
+  const onDrop = useCallback((evt) => {
+    evt.preventDefault();
+    const type = evt.dataTransfer.getData('application/reactflow');
+    const bounds = rfWrapper.current.getBoundingClientRect();
+    const coords = project({
+      x: evt.clientX - bounds.left,
+      y: evt.clientY - bounds.top
+    });
+    const node = {
+      id: getId(),
+      type: 'default',
+      position: coords,
+      data: { label: type.charAt(0).toUpperCase() + type.slice(1) },
+      style: { width: 150 }
+    };
+    setElements((els) => [...els, node]);
+  }, [project, setElements]);
 
   return (
-    <ReactFlow
-      elements={elements}
-      onDragOver={onDragOver}
-      onDrop={onDrop}
-      fitView
-    >
-      <Background gap={16} />
-      <MiniMap />
-      <Controls />
-    </ReactFlow>
+    <div ref={rfWrapper} className="react-flow">
+      <ReactFlow
+        elements={elements}
+        onDragOver={onDragOver}
+        onDrop={onDrop}
+        fitView
+      >
+        <Background gap={16} />
+        <MiniMap />
+        <Controls />
+      </ReactFlow>
+    </div>
   );
 }
 
@@ -81,19 +98,9 @@ function App() {
   const [elements, setElements] = useState([]);
   const [menuOpen, setMenuOpen] = useState(false);
 
-  useEffect(() => {
-    fetch('/api/topology')
-      .then((r) => r.json())
-      .then(({ nodes, edges }) => setElements([...nodes, ...edges]))
-      .catch(console.error);
-  }, []);
-
-  // click-to-add dispatcher
   const addNode = (type) => {
-    // we’ll delegate inside FlowCanvas via context
-    // here we just open/close menu
-    const evt = new CustomEvent('addNodeAtCenter', { detail: type });
-    window.dispatchEvent(evt);
+    // dispatch the center-add event
+    window.dispatchEvent(new CustomEvent('addNodeAtCenter', { detail: type }));
     setMenuOpen(false);
   };
 
@@ -105,7 +112,7 @@ function App() {
 
       <button
         className={`fab ${menuOpen ? 'open' : ''}`}
-        onClick={() => setMenuOpen((o) => !o)}
+        onClick={() => setMenuOpen(o => !o)}
       >
         +
       </button>
@@ -121,7 +128,7 @@ function App() {
               key={type}
               className="tool"
               draggable
-              onDragStart={(e) =>
+              onDragStart={e =>
                 e.dataTransfer.setData('application/reactflow', type)
               }
               onClick={() => addNode(type)}
