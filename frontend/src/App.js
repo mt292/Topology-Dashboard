@@ -1,5 +1,9 @@
 // src/App.js
-import React, { useState, useEffect, useCallback } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+} from 'react';
 import ReactFlow, {
   Background,
   Controls,
@@ -8,8 +12,6 @@ import ReactFlow, {
   useNodesState,
   useEdgesState,
 } from 'react-flow-renderer';
-import 'react-flow-renderer/dist/style.css';
-import 'react-flow-renderer/dist/theme-default.css';
 import './App.css';
 
 let id = 3;
@@ -18,69 +20,88 @@ const getId = () => `node_${id++}`;
 function App() {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
-  const [toolMode, setToolMode] = useState(null);       // 'device' | 'switch' | 'icon'
+  const [toolMode, setToolMode] = useState(null); // 'device'|'switch'|'icon'
   const [menuOpen, setMenuOpen] = useState(false);
 
-  // Fetch the initial topology stub
+  // For ghost preview
+  const [previewPos, setPreviewPos] = useState(null);
+
   useEffect(() => {
     fetch('/api/topology')
       .then((r) => r.json())
       .then(({ nodes: n, edges: e }) => {
-        setNodes(n.map((nd) => ({ ...nd, id: nd.id })));
+        setNodes(n);
         setEdges(e);
       })
       .catch(console.error);
   }, [setNodes, setEdges]);
 
-  // When you click on the blank pane and a tool is selected, drop a node
-  const onPaneClick = useCallback(
+  const onPaneMove = useCallback(
     (event) => {
       if (!toolMode) return;
       const bounds = event.target.getBoundingClientRect();
-      const position = {
+      setPreviewPos({
         x: event.clientX - bounds.left,
         y: event.clientY - bounds.top,
-      };
+      });
+    },
+    [toolMode]
+  );
 
+  const onPaneClick = useCallback(
+    (event) => {
+      if (!toolMode || !previewPos) return;
       const label =
         toolMode === 'device'
-          ? 'New Device'
+          ? 'Device'
           : toolMode === 'switch'
-          ? 'New Switch'
-          : 'New Icon';
-
+          ? 'Switch'
+          : 'Icon';
       const newNode = {
         id: getId(),
+        type: toolMode,    // we’ll hook this up to custom nodeTypes next
+        position: previewPos,
         data: { label },
-        position,
       };
-
       setNodes((nds) => nds.concat(newNode));
       setToolMode(null);
       setMenuOpen(false);
+      setPreviewPos(null);
     },
-    [toolMode, setNodes]
+    [toolMode, previewPos, setNodes]
   );
+
+  // Build a “ghost” node when toolMode is active
+  const ghostNode =
+    toolMode && previewPos
+      ? [
+          {
+            id: '__preview__',
+            type: toolMode,
+            position: previewPos,
+            data: { label: toolMode === 'device' ? 'Device' : toolMode === 'switch' ? 'Switch' : 'Icon' },
+            style: { opacity: 0.5, pointerEvents: 'none' },
+          },
+        ]
+      : [];
 
   return (
     <div className="app">
-      {/* Floating “＋” button */}
       <div className="fab-container">
         <button
           className="fab"
-          onClick={() => setMenuOpen((open) => !open)}
+          onClick={() => setMenuOpen((o) => !o)}
           title="Add node"
         >
           ＋
         </button>
-
         {menuOpen && (
           <div className="fab-menu">
             <button
               className={toolMode === 'device' ? 'active' : ''}
               onClick={() => setToolMode('device')}
             >
-              🖥︎ Device
+              🖥 Device
             </button>
             <button
               className={toolMode === 'switch' ? 'active' : ''}
@@ -99,12 +120,13 @@ function App() {
       </div>
 
       <ReactFlow
-        nodes={nodes}
+        nodes={[...nodes, ...ghostNode]}
         edges={edges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
-        onConnect={(params) => setEdges((eds) => addEdge(params, eds))}
+        onConnect={(p) => setEdges((eds) => addEdge(p, eds))}
         onPaneClick={onPaneClick}
+        onPaneMouseMove={onPaneMove}
         fitView
       >
         <Background gap={16} />
