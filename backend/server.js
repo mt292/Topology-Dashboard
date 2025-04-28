@@ -1,11 +1,10 @@
-#!/usr/bin/env node
-const path = require('path');
 const express = require('express');
-const app = express();
-const fs = require('fs');
-const https = require('https');
+const path = require('path');
 
-// 1) Stub out your topology API
+const app = express();
+const port = process.env.PORT || 80;
+
+// Stub out /api/topology
 app.get('/api/topology', (req, res) => {
   res.json({
     nodes: [
@@ -18,24 +17,15 @@ app.get('/api/topology', (req, res) => {
   });
 });
 
-// 2) Serve the React build
+// Serve React static files
 const buildDir = path.join(__dirname, '../frontend/build');
 app.use(express.static(buildDir));
 
-// 3) For any other route, send back React’s index.html
-app.get('*', (req, res) => {
+// All other requests go to React app
+app.get('/*', (req, res) => {
   res.sendFile(path.join(buildDir, 'index.html'));
 });
 
-// 4) (Optional) Your existing healthcheck:
-app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
-
-const options = {
-  key:  fs.readFileSync(__dirname + '/certs/server-key.pem'),
-  cert: fs.readFileSync(__dirname + '/certs/server-cert.pem'),
-};
-
-const PORT = process.env.PORT || 443;
-https
-  .createServer(options, app)
-  .listen(PORT, () => console.log(`🔒 HTTPS server listening on port ${PORT}`));
+app.listen(port, () => {
+  console.log(`🚀 HTTP server up on port ${port}`);
+});
