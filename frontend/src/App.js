@@ -1,10 +1,10 @@
-// src/App.js
+// v10 style
 import React, { useEffect, useState, useCallback } from 'react';
 import ReactFlow, {
-  Background,
   Controls,
   MiniMap,
 } from 'reactflow';
+import ReactFlow, { Background } from 'react-flow-renderer';
 import 'react-flow-renderer/dist/style.css';
 
 function App() {
