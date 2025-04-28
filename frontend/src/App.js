@@ -5,7 +5,7 @@ import ReactFlow, {
   Controls,
   MiniMap,
 } from 'reactflow';
-import 'reactflow/dist/style.css';
+import 'react-flow-renderer/dist/style.css';
 
 function App() {
   const [elements, setElements] = useState([]);
