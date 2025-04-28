@@ -1,11 +1,9 @@
-/* fill the whole screen */
 .app {
   width: 100vw;
   height: 100vh;
   position: relative;
 }
 
-/* floating action button */
 .fab {
   position: absolute;
   top: 16px;
@@ -26,11 +24,10 @@
   transform: rotate(45deg);
 }
 
-/* toolbar pop-out */
 .toolbar {
   position: absolute;
   top: 16px;
-  right: 88px; /* just to the left of FAB */
+  right: 88px;
   background: white;
   border: 1px solid #ddd;
   border-radius: 8px;
