@@ -1,44 +1,56 @@
-name: Deploy Topology Dashboard
+name: CI/CD
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ github.workspace }}
 
     steps:
+      # 1. Check out your repo
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Set up Node.js 18
+      # 2. Set up Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '18'
 
-      - name: Install & build backend
+      # 3. Build backend
+      - name: Build backend
         working-directory: backend
         run: |
           npm ci
+          # if you have tests: npm test
+        # you can add cache: node_modules caching here if you like
 
-      - name: Install & build frontend
+      # 4. Build frontend
+      - name: Build frontend
         working-directory: frontend
         run: |
-          npm install --legacy-peer-deps
+          npm ci
           npm run build
 
+      # 5. Deploy to your server over SSH
       - name: Deploy to server
         uses: appleboy/ssh-action@v0.1.7
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
-          key:      ${{ secrets.SSH_PRIVATE_KEY }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
           script: |
             set -e
             cd /opt/topology-dashboard
             git pull origin main
+            # re-install & rebuild on the server just to be safe
             npm ci
             npm run build --prefix frontend
             systemctl restart topology-dashboard
